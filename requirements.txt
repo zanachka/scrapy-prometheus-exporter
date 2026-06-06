@@ -1,2 +1,2 @@
-prometheus-client>=0.0.20
-Scrapy>=1.4.0
+prometheus-client>=0.17.0
+Scrapy>=2.11.0

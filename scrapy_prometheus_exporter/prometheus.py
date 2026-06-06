@@ -1,7 +1,7 @@
 import logging
 
 from prometheus_client.twisted import MetricsResource
-from prometheus_client import Counter, Summary, Gauge
+from prometheus_client import Gauge
 from twisted.web.server import Site
 from twisted.web import server, resource
 from twisted.internet import task
@@ -83,7 +83,7 @@ class WebService(Site):
             'spr_request_depth_max', '...', ['spider'])
 
         root = resource.Resource()
-        self.promtheus = None
+        self.prometheus = None
         root.putChild(self.path.encode('utf-8'), MetricsResource())
         server.Site.__init__(self, root)
 
@@ -103,7 +103,7 @@ class WebService(Site):
 
     def engine_started(self):
         # Start server endpoint for exporting metrics
-        self.promtheus = listen_tcp(self.port, self.host, self)
+        self.prometheus = listen_tcp(self.port, self.host, self)
 
         # Periodically update the metrics
         tsk = task.LoopingCall(self.update)
@@ -117,7 +117,7 @@ class WebService(Site):
                 tsk.stop()
 
         # Stop metrics exporting
-        self.promtheus.stopListening()
+        self.prometheus.stopListening()
 
     def spider_opened(self, spider):
         self.spr_opened.labels(spider=self.name).inc()
@@ -168,7 +168,7 @@ class WebService(Site):
         depth = self.stats.get_value('request_depth_max', 0)
         self.spr_request_depth_max.labels(spider=self.name).set(depth)
         for i in range(depth):
-            stat = 'request_depth_count/{}'.format(i)
+            stat = f'request_depth_count/{i}'
             depthv = self.stats.get_value(stat, 0)
             self.spr_request_depth.labels(spider=self.name).set(depthv)
 
@@ -218,7 +218,7 @@ class WebService(Site):
         
     def request_stats(self):
         for i in ['GET', 'PUT', 'DELETE', 'POST']:
-            stat = 'downloader/request_method_count/{}'.format(i)
+            stat = f'downloader/request_method_count/{i}'
             count = self.stats.get_value(stat, 0)
             if count > 0:
                 self.spr_downloader_request_count.labels(
@@ -238,7 +238,7 @@ class WebService(Site):
             spider=self.name).set(response_count)
 
         for i in ['200', '404', '500']:
-            stat = 'downloader/response_status_count/{}'.format(i)
+            stat = f'downloader/response_status_count/{i}'
             status = self.stats.get_value(stat, 0)
             self.spr_downloader_response_status_count.labels(
                 spider=self.name, code=i).set(status)
@@ -249,6 +249,6 @@ class WebService(Site):
 
     def logging_stats(self):
         for i in ['DEBUG', 'ERROR', 'INFO', 'CRITICAL', 'WARNING']:
-            level = self.stats.get_value('log_count/{}'.format(i), 0)
+            level = self.stats.get_value(f'log_count/{i}', 0)
             self.spr_log_count.labels(
                 spider=self.name, level=i).set(level)
