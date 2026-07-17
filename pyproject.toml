@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scrapy-prometheus-exporter"
-version = "1.0.2"
+dynamic = ["version"]
 description = "Scrapy extension to export stats to Prometheus"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "rangertaha", email = "rangertaha@gmail.com" }]
@@ -20,27 +20,66 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: System :: Monitoring",
+    "Typing :: Typed",
 ]
 dependencies = [
-    "prometheus-client>=0.17.0",
-    "Scrapy>=2.11.0",
+    "prometheus-client>=0.25.0",
+    "Scrapy>=2.17.0",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0"]
+test = ["pytest>=9.0", "pytest-cov>=7.0"]
 
 [project.urls]
 Homepage = "https://github.com/rangertaha/scrapy-prometheus-exporter"
 Repository = "https://github.com/rangertaha/scrapy-prometheus-exporter"
+Issues = "https://github.com/rangertaha/scrapy-prometheus-exporter/issues"
+Changelog = "https://github.com/rangertaha/scrapy-prometheus-exporter/blob/master/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/scrapy_prometheus_exporter/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["scrapy_prometheus_exporter"]
+packages = ["src/scrapy_prometheus_exporter"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["scrapy.*", "twisted.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["scrapy_prometheus_exporter"]
+
+[tool.coverage.report]
+show_missing = true
