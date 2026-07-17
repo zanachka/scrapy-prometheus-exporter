@@ -54,48 +54,99 @@ class WebService(Site):
         self.spr_closed = Gauge("spr_closed", "Spider closed", ["spider", "reason"])
 
         self.spr_downloader_request_bytes = Gauge(
-            "spr_downloader_request_bytes", "...", ["spider"]
+            "spr_downloader_request_bytes",
+            "Total bytes of requests sent by the downloader",
+            ["spider"],
         )
         self.spr_downloader_request_total = Gauge(
-            "spr_downloader_request_total", "...", ["spider"]
+            "spr_downloader_request_total",
+            "Total requests sent by the downloader",
+            ["spider"],
         )
         self.spr_downloader_request_count = Gauge(
-            "spr_downloader_request", "...", ["spider", "method"]
+            "spr_downloader_request",
+            "Requests sent by the downloader, by HTTP method",
+            ["spider", "method"],
         )
         self.spr_downloader_response_count = Gauge(
-            "spr_downloader_response", "...", ["spider"]
+            "spr_downloader_response",
+            "Responses received by the downloader",
+            ["spider"],
         )
         self.spr_downloader_response_bytes = Gauge(
-            "spr_downloader_response_bytes", "...", ["spider"]
+            "spr_downloader_response_bytes",
+            "Total bytes of responses received by the downloader",
+            ["spider"],
         )
         self.spr_downloader_response_status_count = Gauge(
-            "spr_downloader_response_status", "...", ["spider", "code"]
+            "spr_downloader_response_status",
+            "Responses received by the downloader, by HTTP status code",
+            ["spider", "code"],
         )
 
-        self.spr_log_count = Gauge("spr_log", "...", ["spider", "level"])
+        self.spr_log_count = Gauge(
+            "spr_log", "Log messages emitted, by log level", ["spider", "level"]
+        )
 
-        self.spr_duplicate_filtered = Gauge("spr_duplicate_filtered", "...", ["spider"])
+        self.spr_duplicate_filtered = Gauge(
+            "spr_duplicate_filtered",
+            "Requests filtered as duplicates by the dupefilter",
+            ["spider"],
+        )
 
         self.spr_memdebug_gc_garbage_count = Gauge(
-            "spr_memdebug_gc_garbage", "...", ["spider"]
+            "spr_memdebug_gc_garbage",
+            "Uncollectable objects found by the memory debugger",
+            ["spider"],
         )
-        self.spr_memdebug_live_refs = Gauge("spr_memdebug_live_refs", "...", ["spider"])
-        self.spr_memusage_max = Gauge("spr_memusage_max", "...", ["spider"])
-        self.spr_memusage_startup = Gauge("spr_memusage_startup", "...", ["spider"])
+        self.spr_memdebug_live_refs = Gauge(
+            "spr_memdebug_live_refs",
+            "Live spider references tracked by the memory debugger",
+            ["spider"],
+        )
+        self.spr_memusage_max = Gauge(
+            "spr_memusage_max", "Peak process memory usage in bytes", ["spider"]
+        )
+        self.spr_memusage_startup = Gauge(
+            "spr_memusage_startup",
+            "Process memory usage at startup in bytes",
+            ["spider"],
+        )
 
-        self.spr_scheduler_dequeued = Gauge("spr_scheduler_dequeued", "...", ["spider"])
-        self.spr_scheduler_enqueued = Gauge("spr_scheduler_enqueued", "...", ["spider"])
+        self.spr_scheduler_dequeued = Gauge(
+            "spr_scheduler_dequeued", "Requests dequeued from the scheduler", ["spider"]
+        )
+        self.spr_scheduler_enqueued = Gauge(
+            "spr_scheduler_enqueued", "Requests enqueued to the scheduler", ["spider"]
+        )
         self.spr_scheduler_enqueued_memory = Gauge(
-            "spr_scheduler_enqueued_memory", "...", ["spider"]
+            "spr_scheduler_enqueued_memory",
+            "Requests enqueued to the scheduler's in-memory queue",
+            ["spider"],
+        )
+        self.spr_scheduler_dequeued_memory = Gauge(
+            "spr_scheduler_dequeued_memory",
+            "Requests dequeued from the scheduler's in-memory queue",
+            ["spider"],
         )
 
-        self.spr_offsite_domains_count = Gauge("spr_offsite_domains", "...", ["spider"])
+        self.spr_offsite_domains_count = Gauge(
+            "spr_offsite_domains",
+            "Distinct domains filtered by the offsite middleware",
+            ["spider"],
+        )
         self.spr_offsite_filtered_count = Gauge(
-            "spr_offsite_filtered", "...", ["spider"]
+            "spr_offsite_filtered",
+            "Requests filtered by the offsite middleware",
+            ["spider"],
         )
 
-        self.spr_request_depth = Gauge("spr_request_depth", "...", ["spider"])
-        self.spr_request_depth_max = Gauge("spr_request_depth_max", "...", ["spider"])
+        self.spr_request_depth = Gauge(
+            "spr_request_depth", "Requests scheduled per depth level", ["spider"]
+        )
+        self.spr_request_depth_max = Gauge(
+            "spr_request_depth_max", "Maximum request depth reached", ["spider"]
+        )
 
         root = resource.Resource()
         self.prometheus: Any = None
@@ -196,7 +247,13 @@ class WebService(Site):
         mdgc_count = self.stats.get_value("memdebug/gc_garbage_count", 0)
         self.spr_memdebug_gc_garbage_count.labels(spider=self.name).set(mdgc_count)
 
-        mdlr_count = self.stats.get_value("memdebug/live_refs/MySpider", 0)
+        # The stat key embeds the spider class name (memdebug/live_refs/<cls>),
+        # so match on the prefix rather than hardcoding a class name.
+        mdlr_count = sum(
+            value
+            for key, value in self.stats.get_stats().items()
+            if key.startswith("memdebug/live_refs/")
+        )
         self.spr_memdebug_live_refs.labels(spider=self.name).set(mdlr_count)
 
     def memory_usage_stats(self) -> None:
@@ -217,7 +274,7 @@ class WebService(Site):
         self.spr_scheduler_enqueued_memory.labels(spider=self.name).set(enqueued_mem)
 
         dequeued_mem = self.stats.get_value("scheduler/dequeued/memory", 0)
-        self.spr_scheduler_enqueued_memory.labels(spider=self.name).set(dequeued_mem)
+        self.spr_scheduler_dequeued_memory.labels(spider=self.name).set(dequeued_mem)
 
     def offsite_stats(self) -> None:
         od_count = self.stats.get_value("offsite/domains", 0)

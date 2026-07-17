@@ -157,8 +157,12 @@ def test_update_maps_stats_to_gauges():
     stats.set_value("dupefilter/filtered", 9)
     stats.set_value("memusage/max", 111)
     stats.set_value("memusage/startup", 100)
+    stats.set_value("memdebug/gc_garbage_count", 5)
+    stats.set_value("memdebug/live_refs/SomeSpider", 6)
     stats.set_value("scheduler/dequeued", 12)
     stats.set_value("scheduler/enqueued", 13)
+    stats.set_value("scheduler/enqueued/memory", 21)
+    stats.set_value("scheduler/dequeued/memory", 17)
     stats.set_value("offsite/domains", 2)
     stats.set_value("offsite/filtered", 8)
     stats.set_value("request_depth_max", 3)
@@ -177,12 +181,48 @@ def test_update_maps_stats_to_gauges():
     assert sample("spr_duplicate_filtered") == 9
     assert sample("spr_memusage_max") == 111
     assert sample("spr_memusage_startup") == 100
+    assert sample("spr_memdebug_gc_garbage") == 5
+    assert sample("spr_memdebug_live_refs") == 6
     assert sample("spr_scheduler_dequeued") == 12
     assert sample("spr_scheduler_enqueued") == 13
+    # Regression: enqueued/memory and dequeued/memory must land on DISTINCT
+    # gauges; the dequeued value used to overwrite the enqueued gauge.
+    assert sample("spr_scheduler_enqueued_memory") == 21
+    assert sample("spr_scheduler_dequeued_memory") == 17
     assert sample("spr_offsite_domains") == 2
     assert sample("spr_offsite_filtered") == 8
     assert sample("spr_request_depth_max") == 3
     assert sample("spr_request_depth") == 4
+
+
+def test_scheduler_memory_gauges_are_distinct():
+    """Regression test: scheduler/dequeued/memory used to overwrite the
+    spr_scheduler_enqueued_memory gauge instead of setting its own gauge."""
+    service = make_service()
+    service.stats.set_value("scheduler/enqueued/memory", 40)
+    service.stats.set_value("scheduler/dequeued/memory", 30)
+    service.update()
+    assert sample("spr_scheduler_enqueued_memory") == 40
+    assert sample("spr_scheduler_dequeued_memory") == 30
+
+
+def test_memdebug_live_refs_matches_any_spider_class():
+    """live_refs stat keys embed the spider class name; the mapping must not
+    hardcode one class name."""
+    service = make_service()
+    service.stats.set_value("memdebug/live_refs/FooSpider", 2)
+    service.stats.set_value("memdebug/live_refs/BarSpider", 3)
+    service.update()
+    assert sample("spr_memdebug_live_refs") == 5
+
+
+def test_gauge_help_strings_are_not_placeholders():
+    """No gauge may ship with a literal \"...\" help string."""
+    make_service()
+    exposition = generate_latest(REGISTRY).decode()
+    for line in exposition.splitlines():
+        if line.startswith("# HELP spr_"):
+            assert not line.endswith(" ..."), line
 
 
 def test_update_with_empty_stats_defaults_to_zero():

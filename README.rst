@@ -79,6 +79,7 @@ Metric                                       Source / meaning
 ``spr_scheduler_dequeued``                   ``scheduler/dequeued``
 ``spr_scheduler_enqueued``                   ``scheduler/enqueued``
 ``spr_scheduler_enqueued_memory``            ``scheduler/enqueued/memory``
+``spr_scheduler_dequeued_memory``            ``scheduler/dequeued/memory``
 ``spr_offsite_domains``                      ``offsite/domains``
 ``spr_offsite_filtered``                     ``offsite/filtered``
 ``spr_request_depth``                        ``request_depth_count/*``

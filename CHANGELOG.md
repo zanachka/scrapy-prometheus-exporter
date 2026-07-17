@@ -36,6 +36,16 @@ then were not tagged, so early entries are approximate.
 
 ### Fixed
 
+- `WebService.update()` wrote the `scheduler/dequeued/memory` stat into the
+  `spr_scheduler_enqueued_memory` gauge, overwriting the enqueued value. The
+  stat now feeds a new `spr_scheduler_dequeued_memory` gauge; covered by a
+  regression test.
+- The `memdebug/live_refs` mapping hardcoded the spider class name
+  `MySpider`; it now matches any `memdebug/live_refs/<SpiderClass>` stat key
+  (values are summed across spider classes).
+- Placeholder `"..."` help strings on the downloader, log, dupefilter,
+  memdebug, memusage, scheduler, offsite, and request-depth gauges replaced
+  with real descriptions (metric names and labels unchanged).
 - `WebService.item_dropped()` incremented the `spr_items_scraped` gauge
   instead of `spr_items_dropped`, so dropped items were counted as scraped.
   Present since the initial release; now covered by a regression test.
